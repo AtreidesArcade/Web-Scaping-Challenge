@@ -5,7 +5,6 @@ import os
 from splinter import Browser
 from webdriver_manager.chrome import ChromeDriverManager
 import pymongo
-
 import numpy as np
 import pandas as pd
 
@@ -15,7 +14,7 @@ getattr(ssl, '_create_unverified_context', None)):
     ssl._create_default_https_context = ssl._create_unverified_context
 
 def scrape():
-    filepath = os.path.join("redplanetscience.html")
+    filepath = os.path.join("mars.html")
     
     with open(filepath, encoding='utf-8') as file:
         html = file.read()
@@ -76,7 +75,7 @@ def scrape():
         title = result.find('h3').text
         titles.append(title)
         
-    #Retrieve just the first word of the title
+    
     first_titles = []
 
     for title in titles: 
