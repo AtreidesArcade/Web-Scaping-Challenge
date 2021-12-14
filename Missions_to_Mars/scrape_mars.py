@@ -1,131 +1,217 @@
+import numpy as np
+import pandas as pd
 from splinter import Browser
 from bs4 import BeautifulSoup as bs
-import pandas as pd
 import time
+import requests
 import re
+import os, ssl
 
-# This is for debugging
-
-def savetofile(contents):
-    file = open('_temporary.txt',"w",encoding="utf-8")
-    file.write(contents)
-    file.close()
-
+if (not os.environ.get('PYTHONHTTPSVERIFY', '') and
+getattr(ssl, '_create_unverified_context', None)):
+    ssl._create_default_https_context = ssl._create_unverified_context
 
 def scrape():
     executable_path = {"executable_path": "chromedriver"}
     browser = Browser("chrome", **executable_path, headless=False)
 
-    # NASA Mars News
 
-    url = 'https://mars.nasa.gov/news/'
+    url = 'https://redplanetscience.com/'
 
     browser.visit(url)
     time.sleep(3)
-
     html = browser.html
     soup = bs(html, 'html.parser')
 
-    slides = soup.find_all('li', class_='slide')
-    content_title = slides[0].find('div', class_='content_title')
-    news_title = content_title.text.strip()
 
-    article_teaser_body = slides[0].find('div', class_='article_teaser_body')
-    news_p = article_teaser_body.text.strip()
+    results = soup.find_all('div', class_='list_text')
+    
+    news = []
+    # Loop through returned results
+    for result in results:
+        news_title = result.find('div', class_='content_title').text
+        news_p = result.find('div', class_='article_teaser_body').text
+        news.append([news_title, news_p])
 
-    # JPL Mars Space Images
+    for result in results:
 
-    base_url = 'https://www.jpl.nasa.gov'
-    url = base_url + '/spaceimages/?search=&category=Mars'
+    # Retrieve the thread title
+        title = result.find('div', class_='content_title').text
+
+
+    # Access the thread's text content
+    title_text = result.find('div', class_='article_teaser_body').text
+
+    try:
+        print('\n-----------------\n')
+        print(title)
+        print(title_text)
+
+    except AttributeError as e:
+        print(e)
+
+
+    # ## JPL Mars Space Images
+
+
+    # url to scrape 
+    url = 'https://spaceimages-mars.com/'
+
 
     browser.visit(url)
-    time.sleep(1)
+    time.sleep(3)
     html = browser.html
     soup = bs(html, 'html.parser')
 
-    featured_image_url = base_url + soup.find_all('a',class_='button fancybox')['src']    
-    # Mars Weather
-    mars_weather = []
-    url = 'https://twitter.com/marswxreport?lang=en'
+
+
+    featured_image= soup.find('img', class_='headerimage fade-in')
+    #featured_image= url + image url
+    featured_image
+
+
+    featured_url = featured_image['src']
+    featured_url
+
+
+
+    #featured image url cat
+    featured_image_df = pd.Series([url,featured_url])
+    full_url = featured_image_df.str.cat()
+    full_url
+
+
+    # ## Mars Facts
+
+
+    url = 'https://galaxyfacts-mars.com'
+
+
+
+    tables = pd.read_html(url)
+    df = tables[0]
+    df.head()
+
+
+
+    #grab column heads
+
+    df.columns = df.iloc[0] 
+    df.drop(index=df.index[0], 
+    axis=0, 
+    inplace=True)
+    df
+
+
+
+
+    #set new index
+    df.set_index('Mars - Earth Comparison')
+
+
+
+
+    #to html
+    facts_html = df.to_html()
+    facts_html
+
+
+
+    #clean up
+    facts_html.replace('\n','')
+
+
+
+    #export html file
+    df.to_html('facts.html')
+
+
+    print(facts_html)
+
+
+    # ## Mars Hemispheres
+
+
+    # Setup splinter
+    executable_path = {'executable_path': '/usr/local/bin/chromedriver'}
+    browser = Browser('chrome', **executable_path, headless=False)
+
+
+    url = 'https://marshemispheres.com/'
+
+
 
     browser.visit(url)
-    time.sleep(10)
-
-    weather_html = browser.html
-
-    soup = bs(weather_html, "html.parser")
-    # print(weathersoup.prettify())
-
-    mars_tweets = [soup.find_all('p', class_="TweetTextSize"), soup.find_all(
-        'span', class_="css-901oao css-16my406 r-1qd0xha r-ad9z0x r-bcqeeo r-qvutc0")]
-
-    for tweets in mars_tweets:
-        mars_tweet = tweets
-
-    for tweet in mars_tweet:
-        if 'InSight' in tweet.text:
-            mars_weather = tweet.text
-            if tweet.a in tweet:
-                mars_weather = mars_weather.strip(tweet.a.text)
-            break
-
-    # Mars facts
-    url = 'https://space-facts.com/mars/'
-    browser.visit(url)  # not necessary, but added for checking the operation
-    time.sleep(1)
-
-    dfs = pd.read_html(url)
-    for df in dfs:
-        try:
-            df = df.rename(columns={0: "Description", 1: "Value"})
-            df = df.set_index("Description")
-            marsfacts_html = df.to_html().replace('\n', '')
-            # df.to_html('marsfacts.html') # to save to a file to test
-            break
-        except:
-            continue
-        
-    # Mars Hemispheres
-
-    base_url = 'https://astrogeology.usgs.gov'
-    url = base_url + '/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
-
-    browser.visit(url)
-    time.sleep(1)
     html = browser.html
     soup = bs(html, 'html.parser')
 
-    items = soup.find_all('div', class_='item')
 
-    urls = []
+
+    results = soup.find_all('div', class_='description')
+
+
     titles = []
-    for item in items:
-        urls.append(base_url + item.find('a')['href'])
-        titles.append(item.find('h3').text.strip())
+    for result in results:
 
-    img_urls = []
-    for oneurl in urls:
-        browser.visit(oneurl)
-        time.sleep(1)
-        html = browser.html
-        soup = bs(html, 'html.parser')
-        oneurl = base_url+soup.find('img',class_='wide-image')['src']
-        img_urls.append(oneurl)
+        titles.append(result.find('h3').text.strip())
+
+    titles
+
+
+
+    first_titles = []
+
+    for title in titles: 
+        first_title = title.split()[0]
+    first_titles.append(first_title)
+
+    #Put the first word of the title in lowercase.
+    for i in range(len(first_titles)):
+        first_titles[i] = first_titles[i].lower()
+    print(first_titles)
+
+
+    images_url = []
+
+    for title in first_titles:
+    #Writing out the full url of the featured image.
+        url_df = pd.Series([url,title,'.html'])
+
+    image_url = url_df.str.cat()
+    browser.visit(image_url)
+
+    html = browser.html
+    soup = bs(html, 'html.parser')
+
+    full_image_url = soup.find('img', class_ = 'wide-image')['src']
+    image_url_df = pd.Series([url,full_image_url])
+    final_image_url = image_url_df.str.cat()
+    images_url.append(final_image_url)
+
+    images_url
+
+
 
     hemisphere_image_urls = []
 
-    for i in range(len(titles)):
-        hemisphere_image_urls.append({'title':titles[i],'img_url':img_urls[i]})
+    for i in range(len(images_url)):
+        hemisphere_dict = ({'title':titles[i],'images_url':images_url[i]})
+        hemisphere_image_urls.append(hemisphere_dict)
+
+
+
+
+    for i in range(len(hemisphere_image_urls)):
+        print(hemisphere_image_urls[i]['title'])
+        print(hemisphere_image_urls[i]['images_url'] + '\n')
+
 
     # Assigning scraped data to a page
-    
     marspage = {}
     marspage["news_title"] = news_title
     marspage["news_p"] = news_p
-    marspage["featured_image_url"] = featured_image_url
-    marspage["mars_weather"] = mars_weather
-    marspage["marsfacts_html"] = marsfacts_html
+    marspage["featured_image_url"] = full_url
+    marspage["facts_html"] = facts_html
     marspage["hemisphere_image_urls"] = hemisphere_image_urls
 
     return marspage
-    
