@@ -152,24 +152,19 @@ def scrape():
 
     titles = []
     for result in results:
-
-        titles.append(result.find('h3').text.strip())
-
-    titles
-
-
-
+        title = result.find('h3').text
+        titles.append(title)
+        
+    #Retrieve just the first word of the title
     first_titles = []
 
     for title in titles: 
         first_title = title.split()[0]
-    first_titles.append(first_title)
-
+        first_titles.append(first_title)
+  
     #Put the first word of the title in lowercase.
     for i in range(len(first_titles)):
         first_titles[i] = first_titles[i].lower()
-    print(first_titles)
-
 
     images_url = []
 
@@ -177,41 +172,30 @@ def scrape():
     #Writing out the full url of the featured image.
         url_df = pd.Series([url,title,'.html'])
 
-    image_url = url_df.str.cat()
-    browser.visit(image_url)
+        image_url = url_df.str.cat()
+        browser.visit(image_url)
+    
+        html = browser.html
+        soup = bs(html, 'html.parser')
 
-    html = browser.html
-    soup = bs(html, 'html.parser')
-
-    full_image_url = soup.find('img', class_ = 'wide-image')['src']
-    image_url_df = pd.Series([url,full_image_url])
-    final_image_url = image_url_df.str.cat()
-    images_url.append(final_image_url)
-
-    images_url
-
-
+        full_image_url = soup.find('img', class_ = 'wide-image')['src']
+        image_url_df = pd.Series([url,full_image_url])
+        final_image_url = image_url_df.str.cat()
+        images_url.append(final_image_url)
 
     hemisphere_image_urls = []
-
-    for i in range(len(images_url)):
-        hemisphere_dict = ({'title':titles[i],'images_url':images_url[i]})
+    for x in range(0,4):
+        hemisphere_dict = {'title': titles[x], 'images_url': images_url[x]}
         hemisphere_image_urls.append(hemisphere_dict)
 
 
 
-
-    for i in range(len(hemisphere_image_urls)):
-        print(hemisphere_image_urls[i]['title'])
-        print(hemisphere_image_urls[i]['images_url'] + '\n')
-
-
     # Assigning scraped data to a page
-    marspage = {}
-    marspage["news_title"] = news_title
-    marspage["news_p"] = news_p
-    marspage["featured_image_url"] = full_url
-    marspage["facts_html"] = facts_html
-    marspage["hemisphere_image_urls"] = hemisphere_image_urls
-
+    marspage = {
+    "news_title" : news_title,
+    "news_p" : news_p,
+    "featured_image_url" : full_url ,#look for full object
+    "facts_html": facts_html,
+    "hemisphere_image_urls" : hemisphere_image_urls
+    }
     return marspage
